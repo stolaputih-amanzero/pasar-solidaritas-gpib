@@ -1,21 +1,39 @@
 {
   "name": "Pasar Solidaritas GPIB",
-  "short_name": "Solidaritas",
-  "description": "Platform marketplace komunitas untuk meningkatkan ekonomi warga jemaat.",
+  "short_name": "Pasar GPIB",
+  "description": "Platform marketplace komunitas dan etalase karya warga jemaat GPIB.",
   "start_url": "/",
+  "id": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#ffffff",
+  "orientation": "portrait",
+  "background_color": "#1c4c37",
+  "theme_color": "#1c4c37",
+  "scope": "/",
+  "categories": ["shopping", "lifestyle", "community"],
   "icons": [
     {
-      "src": "/icon.png",
+      "src": "/icons/icon-192x192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
-      "src": "/icon.png",
+      "src": "/icons/icon-512x512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }

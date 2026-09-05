@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mode Offline • Pasar Solidaritas GPIB</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: #fcfbf9;
+      color: #1a1a1a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 24px;
+      text-align: center;
+    }
+    .card {
+      max-width: 480px;
+      width: 100%;
+      border: 1px solid #e0ded9;
+      background: #ffffff;
+      padding: 40px 28px;
+    }
+    .logo {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 24px;
+      border-radius: 16px;
+      overflow: hidden;
+    }
+    .logo img { width: 100%; height: 100%; object-fit: cover; }
+    .kicker {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.3em;
+      font-weight: 700;
+      color: #1c4c37;
+      margin-bottom: 8px;
+    }
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin-bottom: 12px;
+      font-family: Georgia, serif;
+      font-style: italic;
+    }
+    p {
+      font-size: 13px;
+      color: #666;
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+    button {
+      background-color: #1c4c37;
+      color: #ffffff;
+      border: none;
+      padding: 12px 24px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    button:hover { opacity: 0.9; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">
+      <img src="/icons/icon-192x192.png" alt="Pasar Solidaritas GPIB">
+    </div>
+    <div class="kicker">Koneksi Terputus</div>
+    <h1>Anda Sedang Offline</h1>
+    <p>Aplikasi Pasar Solidaritas GPIB membutuhkan koneksi internet untuk memperbarui stok produk dan transaksi. Silakan periksa jaringan internet perangkat Anda.</p>
+    <button onclick="window.location.reload()">Coba Muat Ulang</button>
+  </div>
+</body>
+</html>
