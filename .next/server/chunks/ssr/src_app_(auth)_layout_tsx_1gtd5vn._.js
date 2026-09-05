@@ -1,0 +1,3 @@
+module.exports=[90430,a=>{"use strict";var b=a.i(7997);a.s(["default",0,function({children:a}){return(0,b.jsx)("div",{className:"flex flex-col min-h-screen bg-background",children:(0,b.jsx)("main",{className:"flex-1 flex flex-col items-center justify-center p-4 md:p-8",children:(0,b.jsx)("div",{className:"w-full max-w-[500px]",children:a})})})}])},67782,function(a){a.n(a.i(90430))}];
+
+//# sourceMappingURL=src_app_%28auth%29_layout_tsx_1gtd5vn._.js.map
