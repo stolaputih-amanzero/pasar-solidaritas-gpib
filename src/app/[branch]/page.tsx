@@ -32,8 +32,7 @@ export default async function BranchStorefrontPage({
     .from('products')
     .select(`
       *,
-      categories(name, slug),
-      supplier_profiles!supplier_id(display_name, business_name, story, quote, cover_image_path)
+      categories(name, slug)
     `)
     .eq('branch_id', branch.id)
     .eq('is_active', true)

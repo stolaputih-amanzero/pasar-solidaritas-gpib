@@ -39,19 +39,37 @@ export default async function BranchKatalogPage({
     .from('products')
     .select(`
       *,
-      categories!inner(id, name, slug),
-      profiles!supplier_id(full_name),
-      supplier_profiles!supplier_id(display_name, business_name)
+      categories(id, name, slug)
     `)
     .eq('branch_id', branch.id)
     .eq('is_active', true)
     .order('created_at', { ascending: false })
 
   if (categorySlug) {
-    query = query.eq('categories.slug', categorySlug)
+    const activeCat = categories?.find(c => c.slug === categorySlug)
+    if (activeCat) {
+      query = query.eq('category_id', activeCat.id)
+    }
   }
 
   const { data: products } = await query
+
+  // Fetch supplier profiles for these products
+  const supplierIds = products ? Array.from(new Set(products.map(p => p.supplier_id))) : []
+  let supplierMap: Record<string, string> = {}
+
+  if (supplierIds.length > 0) {
+    const { data: suppliers } = await supabase
+      .from('profiles')
+      .select('id, full_name')
+      .in('id', supplierIds)
+    
+    if (suppliers) {
+      suppliers.forEach((s: any) => {
+        supplierMap[s.id] = s.full_name
+      })
+    }
+  }
   const activeCategory = categories?.find(c => c.slug === categorySlug)
 
   return (
@@ -117,7 +135,7 @@ export default async function BranchKatalogPage({
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {products.map((product) => {
-              const supplierName = product.supplier_profiles?.display_name || product.profiles?.full_name || 'Supplier Jemaat'
+              const supplierName = supplierMap[product.supplier_id] || 'Supplier Jemaat'
               return (
                 <Link href={`/${branch.slug}/produk/${product.id}`} key={product.id} className="group flex flex-col cursor-pointer">
                   <div className="aspect-[4/5] bg-secondary mb-4 relative overflow-hidden">

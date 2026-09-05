@@ -41,15 +41,32 @@ export default function BranchProductDetailPage() {
         .select(`
           *,
           categories(id, name, slug),
-          profiles!supplier_id(full_name, avatar_url, phone),
-          supplier_profiles!supplier_id(display_name, business_name, story, quote, cover_image_path),
           product_images(*)
         `)
         .eq('id', id)
         .single()
       
       if (data) {
-        setProduct(data as Product)
+        // Fetch supplier profile & user profile
+        const { data: prof } = await supabase
+          .from('profiles')
+          .select('full_name, avatar_url, phone')
+          .eq('id', data.supplier_id)
+          .maybeSingle()
+
+        const { data: suppProf } = await supabase
+          .from('supplier_profiles')
+          .select('display_name, business_name, story, quote, cover_image_path')
+          .eq('profile_id', data.supplier_id)
+          .maybeSingle()
+
+        const fullProduct = {
+          ...data,
+          profiles: prof || null,
+          supplier_profiles: suppProf || null,
+        }
+
+        setProduct(fullProduct as Product)
         setActiveImage(data.cover_image_path || null)
       }
       setLoading(false)

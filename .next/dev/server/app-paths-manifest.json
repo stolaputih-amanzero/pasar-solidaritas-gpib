@@ -1,0 +1,5 @@
+{
+  "/[branch]/katalog/page": "app/[branch]/katalog/page.js",
+  "/[branch]/page": "app/[branch]/page.js",
+  "/page": "app/page.js"
+}
