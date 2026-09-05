@@ -43,9 +43,9 @@ export default async function GlobalLandingPage() {
           <Heart className="w-3 h-3 text-primary" />
           <span>Platform Pemberdayaan Ekonomi Jemaat</span>
         </div>
-        <h1 className="text-4xl sm:text-6xl md:text-7xl font-bold tracking-tighter max-w-4xl mx-auto leading-[0.95] mb-6">
+        <h1 className="editorial-title-hero max-w-4xl mx-auto mb-6">
           Pasar Solidaritas <br />
-          <span className="italic font-serif font-medium text-primary">Keluarga Besar GPIB</span>
+          <span className="editorial-title-serif">Keluarga Besar GPIB</span>
         </h1>
         <p className="text-sm md:text-base text-muted-foreground max-w-2xl mx-auto leading-relaxed">
           Menghubungkan karya otentik, hasil bumi, dan kerajinan tangan dari berbagai jemaat cabang untuk saling menopang dan menguatkan kemandirian ekonomi warga.

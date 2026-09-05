@@ -38,15 +38,26 @@ export default function BranchSupplierOrdersPage() {
         .select(`
           *,
           order_items(*, products(*)),
-          buyer:profiles!buyer_id(full_name, phone),
           pickup_slots(*)
         `)
         .eq('branch_id', branch.id)
         .order('created_at', { ascending: false })
 
       if (data) {
+        // Resolve buyer profiles safely
+        const buyerIds = Array.from(new Set(data.map((o: any) => o.buyer_id)))
+        let buyerMap: Record<string, any> = {}
+        if (buyerIds.length > 0) {
+          const { data: buyers } = await supabase
+            .from('profiles')
+            .select('id, full_name, phone')
+            .in('id', buyerIds)
+          buyerMap = Object.fromEntries((buyers || []).map((b) => [b.id, b]))
+        }
+
         const formattedOrders = data.map((order: any) => ({
           ...order,
+          buyer: buyerMap[order.buyer_id] || { full_name: 'Pembeli Jemaat', phone: null },
           order_items: order.order_items?.filter((item: any) => item.products?.supplier_id === user.id) || []
         })).filter((order: any) => order.order_items.length > 0)
         

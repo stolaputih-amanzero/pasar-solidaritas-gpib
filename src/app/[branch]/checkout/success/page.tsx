@@ -140,11 +140,15 @@ export default function BranchCheckoutSuccessPage({
         </div>
 
         <div className="p-4 bg-primary/5 border border-primary/20 text-left mb-6 space-y-2">
-          <p className="text-[10px] uppercase font-bold tracking-widest text-primary">
-            Rekening Kas Operasional ({branch?.name})
+          <p className="editorial-kicker text-primary">
+            Instruksi Pembayaran • {branch?.name || 'Cabang GPIB'}
           </p>
-          <p className="text-sm font-mono font-bold text-foreground">Bank Mandiri: 123-00-9876543-2</p>
-          <p className="text-xs text-muted-foreground">a.n. Pasar Solidaritas GPIB</p>
+          <p className="text-sm font-bold text-foreground font-sans">
+            Transfer Kas Rekening Distribusi {branch?.name}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Sertakan berita transfer: <span className="font-mono font-bold text-primary">ORD-{orderId ? orderId.slice(0, 8).toUpperCase() : '-'}</span>
+          </p>
         </div>
 
         {/* Payment Proof Upload Section */}

@@ -43,12 +43,11 @@ export default function BranchAdminDashboardPage() {
   const fetchData = useCallback(async () => {
     if (!branch) return
 
-    // Fetch Orders of this branch
+    // Fetch Orders of this branch safely without PostgREST schema cache join failure
     const { data: ordersData } = await supabase
       .from('orders')
       .select(`
         *,
-        buyer:profiles!buyer_id(full_name, phone),
         pickup_slots(*),
         payment_proofs(*),
         order_items(*, products(*))
@@ -57,6 +56,18 @@ export default function BranchAdminDashboardPage() {
       .order('created_at', { ascending: false })
 
     if (ordersData) {
+      // Resolve buyer profiles
+      const buyerIds = Array.from(new Set(ordersData.map((o: any) => o.buyer_id)))
+      if (buyerIds.length > 0) {
+        const { data: buyers } = await supabase
+          .from('profiles')
+          .select('id, full_name, phone')
+          .in('id', buyerIds)
+        const buyerMap = Object.fromEntries((buyers || []).map((b) => [b.id, b]))
+        ordersData.forEach((o: any) => {
+          o.buyer = buyerMap[o.buyer_id] || { full_name: 'Pembeli Jemaat', phone: null }
+        })
+      }
       setOrders(ordersData as Order[])
 
       // Calculate Stats
