@@ -3,6 +3,8 @@ import Image from 'next/image'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getBanners } from '@/lib/supabase/banners'
+import { EditorialCarousel } from '@/components/features/EditorialCarousel'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,6 +25,9 @@ export default async function BranchStorefrontPage({
     .single()
 
   if (!branch) notFound()
+
+  // 2. Fetch banners for this branch
+  const banners = await getBanners(branch.id)
 
   // 2. Fetch categories with active status
   const { data: categories } = await supabase
@@ -191,6 +196,9 @@ export default async function BranchStorefrontPage({
 
       {/* Center Section: Editorial Curation */}
       <section className="editorial-col-main">
+        {/* Editorial Carousel Banners */}
+        {banners.length > 0 && <EditorialCarousel banners={banners} />}
+
         <div className="mb-8">
           <span className="editorial-kicker">Featured Selection</span>
           <h1 className="editorial-title-hero mt-2 mb-4">

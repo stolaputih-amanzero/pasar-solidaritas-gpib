@@ -5,9 +5,11 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { notFound, useParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useCart } from '@/components/providers/cart-provider'
 import { Product } from '@/types/database'
+import { ProductReviews } from '@/components/features/ProductReviews'
+import { Star } from 'lucide-react'
 
 export default function BranchProductDetailPage() {
   const params = useParams()
@@ -19,6 +21,37 @@ export default function BranchProductDetailPage() {
   const [loading, setLoading] = useState(true)
   const [activeImage, setActiveImage] = useState<string | null>(null)
   const [branchName, setBranchName] = useState<string>('')
+  const [branchId, setBranchId] = useState<string>('')
+  
+  // Reviews state
+  const [reviews, setReviews] = useState<any[]>([])
+  const [canReview, setCanReview] = useState(false)
+  const [currentUserId, setCurrentUserId] = useState<string | undefined>()
+
+  const loadReviewsAndUser = useCallback(async (productId: string) => {
+    // 1. Fetch reviews
+    const { data: revs } = await supabase
+      .from('product_reviews')
+      .select(`
+        *,
+        profiles(full_name, avatar_url)
+      `)
+      .eq('product_id', productId)
+      .order('created_at', { ascending: false })
+
+    if (revs) setReviews(revs)
+
+    // 2. Check current user & review authorization
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      setCurrentUserId(user.id)
+      const { data: canRev } = await supabase.rpc('can_review_product', {
+        p_product_id: productId,
+        p_buyer_id: user.id,
+      })
+      setCanReview(!!canRev)
+    }
+  }, [])
 
   useEffect(() => {
     if (!id || !branchSlug) return
@@ -33,10 +66,11 @@ export default function BranchProductDetailPage() {
 
       if (branchData) {
         setBranchName(branchData.name)
+        setBranchId(branchData.id)
       }
 
       // 2. Fetch product
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('products')
         .select(`
           *,
@@ -69,16 +103,18 @@ export default function BranchProductDetailPage() {
         setProduct(fullProduct as Product)
         setActiveImage(data.cover_image_path || null)
       }
+
+      await loadReviewsAndUser(id)
       setLoading(false)
     }
     
     fetchProduct()
-  }, [id, branchSlug])
+  }, [id, branchSlug, loadReviewsAndUser])
 
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center p-16">
-        <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground animate-pulse">Memuat Produk...</p>
+      <div className="flex-1 flex items-center justify-center p-16 min-h-[50vh]">
+        <p className="editorial-kicker animate-pulse">Memuat Produk & Ulasan Jemaat...</p>
       </div>
     )
   }
@@ -93,6 +129,11 @@ export default function BranchProductDetailPage() {
     'Supplier Jemaat'
 
   const supplierStory = product.supplier_profiles?.story || product.supplier_profiles?.quote
+
+  const avgRating = reviews.length > 0 
+    ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length 
+    : 0
+  const reviewCount = reviews.length
 
   const handleAddToCart = () => {
     addItem({
@@ -114,7 +155,7 @@ export default function BranchProductDetailPage() {
       {/* Gallery Section */}
       <section className="col-span-1 md:col-span-7 p-8 md:p-10 border-r border-border bg-secondary/10 flex flex-col">
         <div className="mb-4">
-          <Link href={`/${branchSlug}/katalog`} className="text-[10px] uppercase font-bold tracking-widest text-primary hover:underline underline-offset-4">
+          <Link href={`/${branchSlug}/katalog`} className="editorial-kicker text-primary hover:underline underline-offset-4">
             ← Kembali ke Katalog
           </Link>
         </div>
@@ -130,7 +171,7 @@ export default function BranchProductDetailPage() {
             />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground opacity-50">FOTO PRODUK</span>
+              <span className="editorial-kicker">FOTO PRODUK</span>
             </div>
           )}
         </div>
@@ -166,18 +207,40 @@ export default function BranchProductDetailPage() {
             <span>/</span>
             <span>{branchName || 'Cabang GPIB'}</span>
           </div>
+          
           <h1 className="text-3xl md:text-5xl font-bold tracking-tighter leading-tight">{product.name}</h1>
+
+          {/* Social Proof Rating Snapshot */}
+          {reviewCount > 0 && (
+            <div className="flex items-center gap-2 mt-3">
+              <div className="flex items-center gap-0.5">
+                {[1, 2, 3, 4, 5].map((s) => (
+                  <Star
+                    key={s}
+                    className={`h-4 w-4 ${
+                      s <= Math.round(avgRating)
+                        ? 'fill-amber-400 text-amber-500'
+                        : 'text-muted-foreground/30'
+                    }`}
+                  />
+                ))}
+              </div>
+              <span className="font-bold text-xs">{avgRating.toFixed(1)}</span>
+              <span className="text-[11px] text-muted-foreground font-mono">({reviewCount} ulasan jemaat)</span>
+            </div>
+          )}
+
           <p className="text-2xl font-serif italic text-primary mt-4">Rp {Number(product.price).toLocaleString('id-ID')}</p>
 
           <div className="my-6 h-px bg-border w-full" />
           
           <div className="prose prose-sm dark:prose-invert max-w-none mb-8">
-            <h3 className="text-[10px] uppercase font-bold tracking-[0.3em] text-muted-foreground mb-3">Deskripsi Produk</h3>
+            <h3 className="editorial-kicker mb-3">Deskripsi Produk</h3>
             <p className="text-sm leading-relaxed text-muted-foreground">{product.description || 'Tidak ada deskripsi rinci.'}</p>
             
             {supplierStory && (
               <>
-                <h3 className="text-[10px] uppercase font-bold tracking-[0.3em] text-muted-foreground mt-8 mb-3">Kisah di Balik Produk</h3>
+                <h3 className="editorial-kicker mt-8 mb-3">Kisah di Balik Produk</h3>
                 <blockquote className="border-l-2 border-primary pl-4 text-sm font-serif italic text-foreground/80">
                   "{supplierStory}"
                 </blockquote>
@@ -228,6 +291,19 @@ export default function BranchProductDetailPage() {
           </div>
         </div>
       </section>
+
+      {/* Full-width Product Reviews Section */}
+      <div className="col-span-1 md:col-span-12 px-8 md:px-10 pb-16">
+        <ProductReviews
+          productId={id}
+          branchId={branchId}
+          currentUserId={currentUserId}
+          avgRating={avgRating}
+          reviewCount={reviewCount}
+          reviews={reviews}
+          canReview={canReview}
+        />
+      </div>
     </main>
   )
 }

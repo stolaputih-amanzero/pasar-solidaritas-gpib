@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ReactNode } from 'react'
-import { Store, PlusCircle, Package, ArrowLeft } from 'lucide-react'
+import { Store, PlusCircle, Package, ArrowLeft, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 export default async function BranchSupplierLayout({
@@ -87,6 +87,12 @@ export default async function BranchSupplierLayout({
             <Button variant="outline" size="sm" className="text-xs uppercase tracking-wider font-bold">
               <Package className="mr-1.5 h-3.5 w-3.5" />
               Katalog Saya
+            </Button>
+          </Link>
+          <Link href={`/${branch.slug}/supplier/produk/import`}>
+            <Button variant="outline" size="sm" className="text-xs uppercase tracking-wider font-bold">
+              <Upload className="mr-1.5 h-3.5 w-3.5" />
+              Impor CSV
             </Button>
           </Link>
           <Link href={`/${branch.slug}/supplier/produk/tambah`}>

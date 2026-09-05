@@ -2,6 +2,8 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { Navbar } from '@/components/navbar'
 import { Store, ArrowRight, Heart } from 'lucide-react'
+import { getBanners } from '@/lib/supabase/banners'
+import { EditorialCarousel } from '@/components/features/EditorialCarousel'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,7 +17,10 @@ export default async function GlobalLandingPage() {
     .eq('is_active', true)
     .order('name')
 
-  // 2. Check user session for personalized memberships
+  // 2. Fetch banners
+  const banners = await getBanners()
+
+  // 3. Check user session for personalized memberships
   const { data: { user } } = await supabase.auth.getUser()
 
   let myBranches: any[] = []
@@ -53,6 +58,8 @@ export default async function GlobalLandingPage() {
       </header>
 
       <main className="flex-1 max-w-7xl mx-auto w-full px-6 md:px-10 py-12 space-y-16">
+        {/* Editorial Carousel Banners */}
+        {banners.length > 0 && <EditorialCarousel banners={banners} />}
         {/* Cabang Saya Section (if logged in & has memberships) */}
         {myBranches.length > 0 && (
           <section>

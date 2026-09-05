@@ -148,3 +148,30 @@ export interface AuditLog {
   changes: Record<string, any> | null
   created_at: string
 }
+
+export interface ProductReview {
+  id: string
+  product_id: string
+  branch_id: string
+  buyer_id: string
+  rating: number
+  review_text: string | null
+  created_at: string
+  updated_at: string
+  // Joined fields
+  buyer?: Profile | null
+}
+
+export interface PromotionalBanner {
+  id: string
+  branch_id: string | null
+  title: string
+  subtitle: string | null
+  badge_text: string | null
+  image_url: string
+  cta_text: string | null
+  cta_link: string
+  is_active: boolean
+  sort_order: number
+  created_at: string
+}
