@@ -279,7 +279,18 @@ async function seed() {
 
   // 7. Promotional Banners
   console.log('7. Seeding promotional banners...')
-  const banners = [
+  const banners: Array<{
+    id: string
+    branch_id: string | null
+    title: string
+    subtitle: string
+    badge_text: string
+    image_url: string
+    cta_text: string
+    cta_link: string
+    is_active: boolean
+    sort_order: number
+  }> = [
     {
       id: 'd1111111-0000-0000-0000-000000000001',
       branch_id: null, // Global
@@ -331,7 +342,7 @@ async function seed() {
   ]
 
   for (const bn of banners) {
-    await supabase.from('promotional_banners').upsert(bn)
+    await supabase.from('promotional_banners').upsert(bn as any)
   }
 
   // 8. Completed Orders for realistic 14-day Supplier Analytics
