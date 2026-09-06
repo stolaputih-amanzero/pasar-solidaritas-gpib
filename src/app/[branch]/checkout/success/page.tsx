@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { useParams } from "next/navigation"
 import { supabase } from "@/lib/supabase/client"
-import { submitPaymentProof } from "@/lib/supabase/api"
+import { submitPaymentProof, PAYMENT_PROOFS_BUCKET } from "@/lib/supabase/api"
 import { Order, Branch } from "@/types/database"
+import { AlertTriangle, CheckCircle2, Upload } from "lucide-react"
 
 export default function BranchCheckoutSuccessPage({
   searchParams,
@@ -22,8 +23,10 @@ export default function BranchCheckoutSuccessPage({
   const [branch, setBranch] = useState<Branch | null>(null)
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
-  const [proofSuccess, setProofSuccess] = useState(false)
   const [uploadError, setUploadError] = useState("")
+  
+  // Latest proof info
+  const [latestProof, setLatestProof] = useState<any>(null)
 
   useEffect(() => {
     if (!branchSlug) return
@@ -38,32 +41,36 @@ export default function BranchCheckoutSuccessPage({
     fetchBranch()
   }, [branchSlug])
 
-  useEffect(() => {
+  const fetchOrder = async () => {
     if (!orderId) {
       setLoading(false)
       return
     }
 
-    const fetchOrder = async () => {
-      const { data } = await supabase
-        .from('orders')
-        .select(`
-          *,
-          pickup_slots(*),
-          payment_proofs(*)
-        `)
-        .eq('id', orderId)
-        .single()
+    const { data } = await supabase
+      .from('orders')
+      .select(`
+        *,
+        pickup_slots(*),
+        payment_proofs(*)
+      `)
+      .eq('id', orderId)
+      .single()
 
-      if (data) {
-        setOrder(data as Order)
-        if (data.payment_proofs && data.payment_proofs.length > 0) {
-          setProofSuccess(true)
-        }
+    if (data) {
+      setOrder(data as Order)
+      if (data.payment_proofs && data.payment_proofs.length > 0) {
+        // Sort to get the most recent proof
+        const sortedProofs = [...data.payment_proofs].sort(
+          (a, b) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime()
+        )
+        setLatestProof(sortedProofs[0])
       }
-      setLoading(false)
     }
+    setLoading(false)
+  }
 
+  useEffect(() => {
     fetchOrder()
   }, [orderId])
 
@@ -75,13 +82,13 @@ export default function BranchCheckoutSuccessPage({
     setUploadError("")
 
     try {
-      // 1. Upload to Supabase Storage bucket 'payment_proofs'
+      // 1. Upload to Supabase Storage bucket 'payment-proofs'
       const fileExt = file.name.split('.').pop()
       const fileName = `${orderId}-${Date.now()}.${fileExt}`
       const filePath = `receipts/${fileName}`
 
       const { error: storageError } = await supabase.storage
-        .from('payment_proofs')
+        .from(PAYMENT_PROOFS_BUCKET)
         .upload(filePath, file)
 
       const recordedPath = storageError ? `receipts/${file.name}` : filePath
@@ -89,10 +96,11 @@ export default function BranchCheckoutSuccessPage({
       // 2. Register proof using submit_payment_proof() stored procedure
       await submitPaymentProof({
         orderId: orderId,
-        filePath: recordedPath
+        filePath: recordedPath,
       })
 
-      setProofSuccess(true)
+      // Refresh order state
+      await fetchOrder()
     } catch (err: any) {
       console.error("Upload error:", err)
       setUploadError(err.message || "Gagal mengunggah bukti pembayaran.")
@@ -101,9 +109,13 @@ export default function BranchCheckoutSuccessPage({
     }
   }
 
+  const isPendingVerification = latestProof?.status === 'pending'
+  const isApproved = latestProof?.status === 'approved' || order?.status === 'confirmed'
+  const isRejected = latestProof?.status === 'rejected'
+
   return (
-    <main className="flex items-center justify-center p-6 my-10 min-h-[calc(100vh-200px)]">
-      <div className="max-w-lg w-full border border-border p-8 md:p-10 text-center bg-secondary/5">
+    <main className="flex items-center justify-center p-6 my-10 min-h-[calc(100vh-200px)] animate-page-enter">
+      <div className="max-w-lg w-full border border-border p-8 md:p-10 text-center bg-card shadow-sm">
         <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
           <svg className="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
@@ -151,13 +163,38 @@ export default function BranchCheckoutSuccessPage({
           </p>
         </div>
 
+        {/* Payment Proof Rejection Notice */}
+        {isRejected && (
+          <div className="mb-6 p-4 border border-destructive/30 bg-destructive/5 text-left flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
+            <div>
+              <p className="text-xs font-bold text-destructive uppercase tracking-wider">
+                Bukti Pembayaran Ditolak
+              </p>
+              {latestProof.rejection_reason && (
+                <p className="text-xs text-foreground/80 mt-1 font-medium">
+                  <strong>Catatan Panitia:</strong> {latestProof.rejection_reason}
+                </p>
+              )}
+              <p className="text-[11px] text-muted-foreground mt-2">
+                Silakan unggah ulang bukti transfer yang sah dan jelas agar pesanan Anda dapat segera disetujui.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Payment Proof Upload Section */}
         <div className="mb-6 p-4 border border-border bg-background text-left">
-          <p className="text-xs font-bold uppercase tracking-wider mb-2">Unggah Bukti Transfer</p>
+          <p className="text-xs font-bold uppercase tracking-wider mb-2">Status Bukti Transfer</p>
           
-          {proofSuccess ? (
+          {isApproved ? (
+            <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs font-bold flex items-center gap-2">
+              <CheckCircle2 size={16} />
+              <span>Pembayaran Anda telah diverifikasi oleh Admin Cabang.</span>
+            </div>
+          ) : isPendingVerification ? (
             <div className="p-3 bg-primary/10 border border-primary text-primary text-xs font-bold flex items-center gap-2">
-              <span>✓ Bukti transfer telah diterima & menunggu verifikasi Admin Cabang.</span>
+              <span>✓ Bukti transfer telah diterima & sedang diverifikasi oleh panitia.</span>
             </div>
           ) : (
             <div>
@@ -176,14 +213,21 @@ export default function BranchCheckoutSuccessPage({
                   className="block w-full text-xs text-muted-foreground file:mr-4 file:py-2 file:px-4 file:border-0 file:text-xs file:font-bold file:uppercase file:tracking-widest file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 cursor-pointer"
                 />
               </label>
-              {uploading && <p className="text-[10px] text-primary mt-2 animate-pulse">Mengunggah bukti transfer...</p>}
+              {uploading && (
+                <p className="text-[10px] text-primary mt-2 animate-pulse flex items-center gap-1.5">
+                  <Upload size={12} className="animate-spin" />
+                  <span>Mengunggah bukti transfer...</span>
+                </p>
+              )}
             </div>
           )}
         </div>
         
         <div className="space-y-3">
           <Link href={`/${branchSlug}/katalog`} className="block">
-            <Button variant="outline" className="w-full text-xs uppercase tracking-widest">KEMBALI KE KATALOG</Button>
+            <Button variant="outline" className="w-full text-xs uppercase tracking-widest font-bold">
+              KEMBALI KE KATALOG
+            </Button>
           </Link>
         </div>
       </div>

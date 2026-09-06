@@ -75,16 +75,20 @@ export async function submitPaymentProof(params: {
   return data as string
 }
 
+export const PAYMENT_PROOFS_BUCKET = 'payment-proofs'
+
 /**
  * Admin verifies payment proof using verify_payment() stored procedure.
  */
 export async function verifyPayment(params: {
   proofId: string
   newStatus: 'approved' | 'rejected'
+  rejectionReason?: string
 }): Promise<void> {
   const { error } = await supabase.rpc('verify_payment', {
     p_proof_id: params.proofId,
-    p_new_status: params.newStatus
+    p_new_status: params.newStatus,
+    p_rejection_reason: params.rejectionReason || null,
   })
 
   if (error) {
