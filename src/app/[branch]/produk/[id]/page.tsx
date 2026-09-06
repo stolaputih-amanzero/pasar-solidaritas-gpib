@@ -28,93 +28,88 @@ export default function BranchProductDetailPage() {
   const [canReview, setCanReview] = useState(false)
   const [currentUserId, setCurrentUserId] = useState<string | undefined>()
 
-  const loadReviewsAndUser = useCallback(async (productId: string) => {
-    // 1. Fetch reviews
-    const { data: revs } = await supabase
-      .from('product_reviews')
-      .select(`
-        *,
-        profiles(full_name, avatar_url)
-      `)
-      .eq('product_id', productId)
-      .order('created_at', { ascending: false })
-
-    if (revs) setReviews(revs)
-
-    // 2. Check current user & review authorization
-    const { data: { user } } = await supabase.auth.getUser()
-    if (user) {
-      setCurrentUserId(user.id)
-      const { data: canRev } = await supabase.rpc('can_review_product', {
-        p_product_id: productId,
-        p_buyer_id: user.id,
-      })
-      setCanReview(!!canRev)
-    }
-  }, [])
-
   useEffect(() => {
     if (!id || !branchSlug) return
 
-    const fetchProduct = async () => {
-      // 1. Fetch branch info
-      const { data: branchData } = await supabase
-        .from('branches')
-        .select('id, name')
-        .eq('slug', branchSlug)
-        .single()
+    const fetchAllData = async () => {
+      // 1. Parallel primary queries
+      const [branchRes, prodRes, revsRes, authRes] = await Promise.all([
+        supabase.from('branches').select('id, name').eq('slug', branchSlug).single(),
+        supabase
+          .from('products')
+          .select('*, categories(id, name, slug), product_images(*)')
+          .eq('id', id)
+          .single(),
+        supabase
+          .from('product_reviews')
+          .select('*, profiles(full_name, avatar_url)')
+          .eq('product_id', id)
+          .order('created_at', { ascending: false }),
+        supabase.auth.getUser()
+      ])
 
-      if (branchData) {
-        setBranchName(branchData.name)
-        setBranchId(branchData.id)
+      if (branchRes.data) {
+        setBranchName(branchRes.data.name)
+        setBranchId(branchRes.data.id)
       }
 
-      // 2. Fetch product
-      const { data } = await supabase
-        .from('products')
-        .select(`
-          *,
-          categories(id, name, slug),
-          product_images(*)
-        `)
-        .eq('id', id)
-        .single()
-      
-      if (data) {
-        // Fetch supplier profile & user profile
-        const { data: prof } = await supabase
-          .from('profiles')
-          .select('full_name, avatar_url, phone')
-          .eq('id', data.supplier_id)
-          .maybeSingle()
+      if (revsRes.data) {
+        setReviews(revsRes.data)
+      }
 
-        const { data: suppProf } = await supabase
-          .from('supplier_profiles')
-          .select('display_name, business_name, story, quote, cover_image_path')
-          .eq('profile_id', data.supplier_id)
-          .maybeSingle()
+      const user = authRes.data?.user
+      if (user) {
+        setCurrentUserId(user.id)
+      }
+
+      const data = prodRes.data
+      if (data) {
+        // 2. Parallel secondary queries (supplier profile + can_review RPC)
+        const [profRes, suppProfRes, canRevRes] = await Promise.all([
+          supabase.from('profiles').select('full_name, avatar_url, phone').eq('id', data.supplier_id).maybeSingle(),
+          supabase.from('supplier_profiles').select('display_name, business_name, story, quote, cover_image_path').eq('profile_id', data.supplier_id).maybeSingle(),
+          user
+            ? supabase.rpc('can_review_product', { p_product_id: id, p_buyer_id: user.id })
+            : Promise.resolve({ data: false })
+        ])
 
         const fullProduct = {
           ...data,
-          profiles: prof || null,
-          supplier_profiles: suppProf || null,
+          profiles: profRes.data || null,
+          supplier_profiles: suppProfRes.data || null,
         }
 
         setProduct(fullProduct as Product)
         setActiveImage(data.cover_image_path || null)
+        setCanReview(!!canRevRes.data)
       }
 
-      await loadReviewsAndUser(id)
       setLoading(false)
     }
     
-    fetchProduct()
-  }, [id, branchSlug, loadReviewsAndUser])
+    fetchAllData()
+  }, [id, branchSlug])
 
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center p-16 min-h-[50vh]">
-        <p className="editorial-kicker animate-pulse">Memuat Produk & Ulasan Jemaat...</p>
+      <div className="container mx-auto px-4 py-8 max-w-5xl animate-page-enter">
+        <div className="flex gap-2 items-center mb-8">
+          <div className="h-3 w-16 bg-muted animate-pulse" />
+          <span className="text-muted-foreground">/</span>
+          <div className="h-3 w-24 bg-muted animate-pulse" />
+          <span className="text-muted-foreground">/</span>
+          <div className="h-3 w-32 bg-muted animate-pulse" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+          <div className="aspect-[4/5] bg-muted animate-pulse w-full" />
+          <div className="space-y-6">
+            <div className="h-4 w-28 bg-muted animate-pulse" />
+            <div className="h-10 w-4/5 bg-muted animate-pulse" />
+            <div className="h-8 w-36 bg-muted animate-pulse" />
+            <div className="h-24 w-full bg-muted animate-pulse pt-4" />
+            <div className="h-12 w-full bg-muted animate-pulse pt-6" />
+          </div>
+        </div>
       </div>
     )
   }

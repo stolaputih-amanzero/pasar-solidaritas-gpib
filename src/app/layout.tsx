@@ -36,6 +36,9 @@ export const metadata: Metadata = {
   },
 };
 
+import { Suspense } from 'react';
+import { TopProgressBar } from '@/components/ui/top-progress-bar';
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -46,7 +49,10 @@ export default function RootLayout({
       <head>
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
       </head>
-      <body className={`${inter.variable} ${playfair.variable} font-sans`}>
+      <body className={`${inter.variable} ${playfair.variable} font-sans antialiased`}>
+        <Suspense fallback={null}>
+          <TopProgressBar />
+        </Suspense>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

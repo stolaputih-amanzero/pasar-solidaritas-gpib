@@ -94,6 +94,29 @@
 }
 
 /* =========================================================================
+   FAST & SMOOTH TRANSITIONS & MICRO-ANIMATIONS
+   Hardware-accelerated transitions & keyframes for instantaneous UX feel
+   ========================================================================= */
+html {
+  scroll-behavior: smooth;
+}
+
+@keyframes pageEnter {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-page-enter {
+  animation: pageEnter 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* =========================================================================
    EDITORIAL DESIGN SYSTEM (Pasar Solidaritas GPIB)
    Reusable visual tokens & component classes ensuring zero hardcoded styles
    ========================================================================= */
@@ -140,19 +163,24 @@
 
   /* Editorial Cards & Product Frames */
   .editorial-card {
-    @apply flex flex-col cursor-pointer transition-all;
+    @apply flex flex-col cursor-pointer transition-all duration-300 ease-out;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+  }
+  .editorial-card:hover {
+    transform: translateY(-2px) translateZ(0);
   }
   .editorial-image-frame {
     @apply aspect-[4/5] bg-secondary mb-4 relative overflow-hidden;
   }
   .editorial-image-overlay {
-    @apply absolute inset-0 bg-black/5 dark:bg-white/5 group-hover:bg-transparent transition-colors z-10;
+    @apply absolute inset-0 bg-black/5 dark:bg-white/5 group-hover:bg-transparent transition-colors duration-300 z-10;
   }
   .editorial-btn-action {
-    @apply bg-background text-foreground text-[10px] font-bold px-4 py-2 uppercase tracking-widest border border-border shadow-lg transition-transform duration-200 hover:scale-105;
+    @apply bg-background text-foreground text-[10px] font-bold px-4 py-2 uppercase tracking-widest border border-border shadow-md transition-all duration-200 hover:scale-105 hover:border-primary hover:text-primary;
   }
   .editorial-badge-pill {
-    @apply text-[9px] uppercase font-bold tracking-widest px-2 py-0.5;
+    @apply text-[9px] uppercase font-bold tracking-widest px-2 py-0.5 transition-colors duration-200;
   }
   .editorial-badge-verified {
     @apply text-[10px] font-bold uppercase tracking-widest px-2 py-1 bg-background/10 text-background rounded border border-background/20;

@@ -10,23 +10,24 @@ export const dynamic = 'force-dynamic'
 export default async function GlobalLandingPage() {
   const supabase = await createClient()
 
-  // 1. Fetch all active branches
-  const { data: branches } = await supabase
-    .from('branches')
-    .select('*')
-    .eq('is_active', true)
-    .order('name')
+  // 1. Parallel fetch: branches, banners, and auth user
+  const [branchesResult, banners, userResult] = await Promise.all([
+    supabase
+      .from('branches')
+      .select('*')
+      .eq('is_active', true)
+      .order('name'),
+    getBanners(),
+    supabase.auth.getUser(),
+  ])
 
-  // 2. Fetch banners
-  const banners = await getBanners()
-
-  // 3. Check user session for personalized memberships
-  const { data: { user } } = await supabase.auth.getUser()
+  const branches = branchesResult.data || []
+  const user = userResult.data?.user
 
   let myBranches: any[] = []
-  let otherBranches = branches || []
+  let otherBranches = branches
 
-  if (user && branches) {
+  if (user && branches.length > 0) {
     const { data: memberships } = await supabase
       .from('branch_members')
       .select('branch_id, role')
@@ -39,7 +40,7 @@ export default async function GlobalLandingPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-background">
+    <div className="flex flex-col min-h-screen bg-background animate-page-enter">
       <Navbar />
 
       {/* Hero Header Section */}
@@ -79,6 +80,7 @@ export default async function GlobalLandingPage() {
                 <Link
                   key={branch.id}
                   href={`/${branch.slug}`}
+                  prefetch={true}
                   className="group block p-6 border-2 border-primary/40 bg-primary/5 hover:border-primary transition-all relative"
                 >
                   <div className="flex justify-between items-start mb-4">
@@ -127,6 +129,7 @@ export default async function GlobalLandingPage() {
                 <Link
                   key={branch.id}
                   href={`/${branch.slug}`}
+                  prefetch={true}
                   className="group block p-6 border border-border bg-card hover:border-primary hover:bg-secondary/20 transition-all"
                 >
                   <div className="flex justify-between items-start mb-4">

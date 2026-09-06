@@ -48,10 +48,18 @@ export function EditorialCarousel({ banners }: { banners: PromotionalBanner[] })
 
       <div className="overflow-hidden" ref={emblaRef}>
         <div className="flex gap-6">
-          {banners.map((banner) => (
+          {banners.map((banner, idx) => (
             <div key={banner.id} className="flex-[0_0_100%] md:flex-[0_0_calc(66.666%-12px)] relative group">
-              <Link href={banner.cta_link} className="block relative aspect-[16/9] md:aspect-[21/9] overflow-hidden bg-muted rounded-none border border-border group-hover:border-primary transition-colors">
-                <Image src={banner.image_url} alt={banner.title} fill className="object-cover transition-transform duration-700 group-hover:scale-105" priority />
+              <Link href={banner.cta_link} prefetch={true} className="block relative aspect-[16/9] md:aspect-[21/9] overflow-hidden bg-muted rounded-none border border-border group-hover:border-primary transition-colors">
+                <Image
+                  src={banner.image_url}
+                  alt={banner.title}
+                  fill
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 70vw, 800px"
+                  className="object-cover transition-transform duration-700 group-hover:scale-105"
+                  priority={idx === 0}
+                  loading={idx === 0 ? undefined : 'lazy'}
+                />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-transparent" />
                 
                 <div className="absolute bottom-0 left-0 p-6 md:p-10 text-white max-w-2xl">

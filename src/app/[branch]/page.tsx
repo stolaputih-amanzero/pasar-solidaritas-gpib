@@ -26,28 +26,38 @@ export default async function BranchStorefrontPage({
 
   if (!branch) notFound()
 
-  // 2. Fetch banners for this branch
-  const banners = await getBanners(branch.id)
+  // 2. Parallel fetch banners, categories, products, supplier, orders impact, and supplier count
+  const [
+    banners,
+    { data: categories },
+    { data: products },
+    { data: featuredSupplier },
+    { data: completedOrders },
+    { count: supplierCount }
+  ] = await Promise.all([
+    getBanners(branch.id),
+    supabase.from('categories').select('*').eq('is_active', true).order('name'),
+    supabase
+      .from('products')
+      .select('*, categories(name, slug)')
+      .eq('branch_id', branch.id)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false }),
+    supabase.from('supplier_profiles').select('*').eq('is_featured', true).limit(1).maybeSingle(),
+    adminClient
+      .from('orders')
+      .select('total_amount, status')
+      .eq('branch_id', branch.id)
+      .in('status', ['confirmed', 'processing', 'ready_for_pickup', 'completed']),
+    supabase
+      .from('branch_members')
+      .select('*', { count: 'exact', head: true })
+      .eq('branch_id', branch.id)
+      .eq('role', 'supplier')
+      .eq('is_active', true),
+  ])
 
-  // 2. Fetch categories with active status
-  const { data: categories } = await supabase
-    .from('categories')
-    .select('*')
-    .eq('is_active', true)
-    .order('name')
-
-  // 3. Fetch active products for this branch
-  const { data: products } = await supabase
-    .from('products')
-    .select(`
-      *,
-      categories(name, slug)
-    `)
-    .eq('branch_id', branch.id)
-    .eq('is_active', true)
-    .order('created_at', { ascending: false })
-
-  // 4. Compute dynamic category product counts
+  // 3. Compute dynamic category product counts
   const categoryCounts: Record<string, number> = {}
   if (products) {
     products.forEach((p) => {
@@ -56,15 +66,6 @@ export default async function BranchStorefrontPage({
       }
     })
   }
-
-  // 5. Fetch Featured Supplier Profile from Supabase
-  // First attempt: check for is_featured in supplier_profiles
-  const { data: featuredSupplier } = await supabase
-    .from('supplier_profiles')
-    .select('*')
-    .eq('is_featured', true)
-    .limit(1)
-    .maybeSingle()
 
   // Fallback: If not featured specifically, query active supplier from branch_members
   let activeSupplier = featuredSupplier
@@ -88,50 +89,35 @@ export default async function BranchStorefrontPage({
       if (suppData) {
         activeSupplier = suppData
       } else {
-        const { data: profileData } = await supabase
+        const { data: profData } = await supabase
           .from('profiles')
-          .select('id, full_name, avatar_url')
+          .select('full_name, avatar_url')
           .eq('id', branchSupplierMember.profile_id)
-          .maybeSingle()
+          .single()
 
-        if (profileData) {
+        if (profData) {
           activeSupplier = {
-            profile_id: profileData.id,
-            display_name: profileData.full_name,
-            business_name: 'Mitra Jemaat ' + branch.name,
-            story: 'Menghadirkan karya dan komoditas terbaik untuk mempererat perekonomian jemaat.',
-            quote: 'Saling menopang dan menguatkan kemandirian ekonomi keluarga.',
-            cover_image_path: profileData.avatar_url,
-            is_featured: false,
+            id: 'virtual-' + branchSupplierMember.profile_id,
+            profile_id: branchSupplierMember.profile_id,
+            bio: 'Mitra karya jemaat aktif GPIB yang menghasilkan produk berkualitas dengan semangat saling menopang.',
+            story: 'Memulai usaha sebagai wujud kemandirian ekonomi keluarga dan jemaat.',
+            cover_image_path: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=600',
+            profiles: profData
           }
         }
       }
     }
   }
 
-  // 6. Compute Real Community Impact from Supabase Orders
-  const { data: completedOrders } = await adminClient
-    .from('orders')
-    .select('total_amount, status')
-    .eq('branch_id', branch.id)
-    .in('status', ['confirmed', 'processing', 'ready_for_pickup', 'completed'])
-
   const totalImpact = (completedOrders || []).reduce(
     (acc, curr) => acc + (Number(curr.total_amount) || 0),
     0
   )
 
-  const { count: supplierCount } = await supabase
-    .from('branch_members')
-    .select('*', { count: 'exact', head: true })
-    .eq('branch_id', branch.id)
-    .eq('role', 'supplier')
-    .eq('is_active', true)
-
   const featuredList = products && products.length > 0 ? products.slice(0, 2) : []
 
   return (
-    <main className="editorial-grid">
+    <main className="editorial-grid animate-page-enter">
       {/* Left Sidebar: Distribution Hub Info & Dynamic Categories */}
       <aside className="editorial-col-sidebar">
         <div>
@@ -212,10 +198,11 @@ export default async function BranchStorefrontPage({
 
         {featuredList.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 my-6">
-            {featuredList.map((prod) => (
+            {featuredList.map((prod, idx) => (
               <Link
                 href={`/${branch.slug}/produk/${prod.id}`}
                 key={prod.id}
+                prefetch={true}
                 className="editorial-card"
               >
                 <div className="editorial-image-frame">
@@ -224,8 +211,10 @@ export default async function BranchStorefrontPage({
                       src={prod.cover_image_path}
                       alt={prod.name}
                       fill
+                      sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
                       className="object-cover transition-transform duration-700 group-hover:scale-105"
-                      priority
+                      priority={idx < 2}
+                      loading={idx < 2 ? undefined : 'lazy'}
                     />
                   ) : (
                     <div className="absolute inset-0 flex items-center justify-center">
